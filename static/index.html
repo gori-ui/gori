@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Г.О.Р.И. / HazardWatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {
+      --bg: #eef2ef;
+      --panel: rgba(252, 253, 251, 0.88);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --line: rgba(17, 33, 28, 0.12);
+      --line-strong: rgba(17, 33, 28, 0.18);
+      --text: #17241f;
+      --muted: #66756f;
+      --brand: #1f5344;
+      --accent: #cf7b4d;
+      --shadow: 0 20px 44px rgba(23, 36, 31, 0.12);
+      --radius: 24px;
+      --critical: #c55849;
+      --very-high: #e78a71;
+      --high: #f1c08f;
+      --moderate: #ecdfb8;
+      --low: #d9e6d5;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Manrope", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at top left, rgba(207, 123, 77, 0.08), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(31, 83, 68, 0.08), transparent 30%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #app {
+      position: relative;
+      height: 100%;
+      width: 100%;
+      z-index: 1;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .top-shell {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 1500;
+      display: grid;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .top-shell > * {
+      pointer-events: auto;
+    }
+
+    .brand {
+      width: fit-content;
+      max-width: min(560px, calc(100vw - 32px));
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 26px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .brand-mark {
+      width: 54px;
+      height: 54px;
+      border-radius: 18px;
+      background: linear-gradient(150deg, #1d453a, #368266);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .brand-title {
+      font-family: "Archivo", sans-serif;
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: -0.05em;
+      margin: 0;
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .decision-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+      border-radius: 26px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .strip-card {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(17, 33, 28, 0.07);
+      min-width: 0;
+    }
+
+    .strip-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .strip-value {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .strip-note {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .mode-banner {
+      width: fit-content;
+      max-width: min(760px, calc(100vw - 32px));
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .mode-banner-copy {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .mode-banner-kicker {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 800;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .mode-banner-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .mode-banner-subtitle {
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .button {
+      border: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      background: #ffffff;
+      border-color: rgba(17, 33, 28, 0.28);
+    }
+
+    .floating-panel {
+      position: fixed;
+      z-index: 1200;
+      width: 360px;
+      max-width: calc(100vw - 24px);
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .operator-panel {
+      width: 520px;
+      max-width: calc(100vw - 24px);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid rgba(17, 33, 28, 0.08);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-subtitle {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      max-height: min(72vh, 700px);
+      overflow: auto;
+    }
+
+    .operator-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .operator-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .operator-summary-card,
+    .operator-list-item,
+    .operator-inline-card {
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(17, 33, 28, 0.08);
+      padding: 12px 14px;
+    }
+
+    .operator-summary-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      margin-top: 6px;
+    }
+
+    .operator-summary-copy,
+    .operator-inline-copy {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .operator-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .operator-list-item {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .operator-list-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(17, 33, 28, 0.16);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .operator-list-item.selected {
+      border-color: rgba(31, 83, 68, 0.24);
+      background: rgba(239, 246, 242, 0.92);
+      box-shadow: inset 0 0 0 1px rgba(31, 83, 68, 0.08);
+    }
+
+    .operator-list-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .operator-list-title {
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .operator-list-meta {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .operator-strip {
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metric-row, .capability-row, .layer-item, .alert-card, .reason-card, .timeline-item, .quick-action {
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(17, 33, 28, 0.08);
+    }
+
+    .section-note {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .zone-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .zone-option {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(17, 33, 28, 0.08);
+      background: rgba(255, 255, 255, 0.68);
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    }
+
+    .zone-option:hover {
+      border-color: rgba(17, 33, 28, 0.16);
+      background: rgba(255, 255, 255, 0.82);
+      transform: translateY(-1px);
+    }
+
+    .zone-option.selected {
+      border-color: rgba(31, 83, 68, 0.24);
+      background: rgba(239, 246, 242, 0.92);
+      box-shadow: inset 0 0 0 1px rgba(31, 83, 68, 0.08);
+    }
+
+    .zone-option-title {
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .zone-option-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric-row {
+      padding: 12px 14px;
+    }
+
+    .metric-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .legend-item, .timeline-item, .reason-card, .capability-row, .layer-item, .alert-card, .quick-action {
+      padding: 12px 14px;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(17, 33, 28, 0.08);
+    }
+
+    .legend-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      margin-top: 2px;
+    }
+
+    .legend-title, .reason-title, .alert-title, .timeline-title, .layer-title {
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .legend-copy, .reason-copy, .alert-copy, .timeline-copy, .layer-copy {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      background: rgba(17, 33, 28, 0.06);
+      color: var(--text);
+    }
+
+    .badge.live {
+      background: rgba(47, 143, 104, 0.12);
+      color: #21694c;
+    }
+
+    .badge.prepared {
+      background: rgba(207, 123, 77, 0.14);
+      color: #8a4d29;
+    }
+
+    .badge.partial {
+      background: rgba(204, 171, 68, 0.18);
+      color: #7a6416;
+    }
+
+    .badge.no-nearby-signal {
+      background: rgba(70, 114, 132, 0.12);
+      color: #436676;
+    }
+
+    .badge.missing {
+      background: rgba(152, 163, 158, 0.22);
+      color: #55625d;
+    }
+
+    .badge.unavailable {
+      background: rgba(152, 163, 158, 0.22);
+      color: #55625d;
+    }
+
+    .badge.immediate {
+      background: rgba(197, 88, 73, 0.16);
+      color: #8f3327;
+    }
+
+    .badge.priority {
+      background: rgba(207, 123, 77, 0.16);
+      color: #8a4d29;
+    }
+
+    .badge.monitor {
+      background: rgba(70, 114, 132, 0.12);
+      color: #436676;
+    }
+
+    .badge.watch {
+      background: rgba(17, 33, 28, 0.06);
+      color: var(--text);
+    }
+
+    .decision-hero {
+      padding: 14px;
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(245, 248, 246, 0.78));
+      border: 1px solid rgba(17, 33, 28, 0.08);
+    }
+
+    .decision-zone {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.2;
+    }
+
+    .decision-meta {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .decision-score {
+      margin-top: 12px;
+      display: flex;
+      align-items: end;
+      gap: 10px;
+    }
+
+    .decision-score-value {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .decision-score-copy {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .empty-card {
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px dashed rgba(17, 33, 28, 0.16);
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .role-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1800;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(238, 242, 239, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .role-overlay.open {
+      display: flex;
+    }
+
+    .role-dialog {
+      width: min(1040px, 100%);
+      border-radius: 32px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+      box-shadow: 0 28px 60px rgba(23, 36, 31, 0.18);
+      padding: 26px;
+    }
+
+    .role-title {
+      font-family: "Archivo", sans-serif;
+      font-size: 30px;
+      letter-spacing: -0.05em;
+      margin: 0;
+    }
+
+    .role-subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .role-groups {
+      margin-top: 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .role-group-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .role-card {
+      text-align: left;
+      padding: 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(17, 33, 28, 0.1);
+      background: rgba(248, 249, 247, 0.9);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .role-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(17, 33, 28, 0.18);
+      box-shadow: 0 12px 28px rgba(23, 36, 31, 0.08);
+    }
+
+    .role-card.recommended {
+      background: linear-gradient(145deg, rgba(246, 250, 247, 0.98), rgba(235, 243, 238, 0.88));
+      border-color: rgba(31, 83, 68, 0.18);
+    }
+
+    .role-icon {
+      font-size: 26px;
+      margin-bottom: 12px;
+    }
+
+    .role-card-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .role-card-copy {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+
+    .role-card-meta {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 0 0 1px rgba(17, 33, 28, 0.12);
+    }
+
+    .map-note {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 1200;
+      max-width: 320px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(255, 255, 255, 0.76) !important;
+      border-top-left-radius: 12px;
+      backdrop-filter: blur(12px);
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      display: none;
+    }
+
+    @media (max-width: 1120px) {
+      .decision-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .role-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .operator-summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .top-shell {
+        right: 12px;
+        left: 12px;
+        top: 12px;
+      }
+
+      .brand,
+      .mode-banner {
+        max-width: 100%;
+      }
+
+      .decision-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .floating-panel {
+        left: 12px !important;
+        right: 12px;
+        width: auto;
+      }
+
+      .role-dialog {
+        padding: 20px;
+      }
+
+      .role-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="map"></div>
+
+    <div class="top-shell">
+      <div class="brand">
+        <div class="brand-mark">Г</div>
+        <div>
+          <div class="brand-title">Г.О.Р.И.</div>
+          <div class="brand-subtitle">HazardWatch Decision Core за национална wildfire intelligence платформа за България</div>
+        </div>
+      </div>
+
+      <section id="decisionStrip" class="decision-strip"></section>
+
+      <section class="mode-banner">
+        <div class="mode-banner-copy">
+          <div class="mode-banner-kicker">Режим</div>
+          <div id="modeTitle" class="mode-banner-title">Гражданин</div>
+          <div id="modeSubtitle" class="mode-banner-subtitle">Интерфейсът ще се адаптира спрямо нуждите ти.</div>
+        </div>
+        <button id="changeRoleButton" class="button" type="button">Смени режим</button>
+      </section>
+    </div>
+
+    <aside id="legendPanel" class="floating-panel" style="top: 202px; left: 16px;">
+      <div class="panel-header" data-drag-handle>
+        <div>
+          <div class="panel-title">Risk Level Legend</div>
+          <div class="panel-subtitle">5 operational tiers с action mapping.</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="legendContent" class="panel-section"></div>
+      </div>
+    </aside>
+
+    <aside id="layersPanel" class="floating-panel" style="top: 202px; right: 16px;">
+      <div class="panel-header" data-drag-handle>
+        <div>
+          <div class="panel-title">Data & Layers</div>
+          <div class="panel-subtitle">Активни слоеве, prepared integrations и честни capability states.</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="panel-section">
+          <div class="section-label">Картен режим</div>
+          <div id="layerModeSummary" class="empty-card"></div>
+        </div>
+        <div id="layerGroupsContent" class="panel-section"></div>
+        <div id="capabilitiesContent" class="panel-section"></div>
+      </div>
+    </aside>
+
+    <aside id="decisionPanel" class="floating-panel" style="bottom: 16px; left: 16px;">
+      <div class="panel-header" data-drag-handle>
+        <div>
+          <div class="panel-title">Decision Panel</div>
+          <div class="panel-subtitle">Риск, причини, действие и data basis за избраната зона.</div>
+        </div>
+      </div>
+      <div class="panel-body" id="decisionContent">
+        <div class="empty-card">Избери зона на картата, за да видиш decision-first оценка с operational wording.</div>
+      </div>
+    </aside>
+
+    <aside id="operatorPanel" class="floating-panel operator-panel" style="bottom: 16px; left: 16px; display: none;">
+      <div class="panel-header" data-drag-handle>
+        <div>
+          <div id="operatorPanelTitle" class="panel-title">Operator Dashboard</div>
+          <div id="operatorPanelSubtitle" class="panel-subtitle">Overview, incident detail and zone decision context for operator mode.</div>
+        </div>
+      </div>
+      <div class="panel-body" id="operatorContent">
+        <div class="empty-card">Switch to the official role to open the operator dashboard shell.</div>
+      </div>
+    </aside>
+
+    <aside id="alertsPanel" class="floating-panel" style="bottom: 16px; right: 16px;">
+      <div class="panel-header" data-drag-handle>
+        <div>
+          <div class="panel-title">Active Signals</div>
+          <div class="panel-subtitle">Alert objects с who, where, why, severity и препоръчано действие.</div>
+        </div>
+      </div>
+      <div class="panel-body" id="alertsContent"></div>
+    </aside>
+
+    <div class="map-note">
+      Тази версия е Phase 1 / Decision Core. Картата и decision логиката са live като product foundation, но live national data integrations още не са свързани.
+    </div>
+
+    <div id="roleOverlay" class="role-overlay">
+      <div class="role-dialog">
+        <h1 class="role-title">Избери как ще използваш системата</h1>
+        <div class="role-subtitle">Интерфейсът ще се адаптира спрямо нуждите ти. Ролята активира реален картен режим, decision wording и приоритетни действия.</div>
+        <div id="roleGroups" class="role-groups"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

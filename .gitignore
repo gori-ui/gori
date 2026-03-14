@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+uvicorn.stdout.log
+uvicorn.stderr.log
+checkpoints/
+data/
