@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse, Response
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 from gory_core.analyst_exports import (
@@ -48,11 +45,7 @@ from gory_core.runtime_context import (
 )
 from gory_core.satellite_signals import ingest_satellite_signal
 
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-
 app = FastAPI(title="G.O.R.I. Decision Core")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class CitizenSignalIn(BaseModel):
@@ -187,8 +180,11 @@ def build_bootstrap_payload(role_id: str) -> dict:
 
 
 @app.get("/")
-def index():
-    return FileResponse(STATIC_DIR / "index.html")
+def root():
+    return {
+        "service": "GORI API",
+        "status": "running",
+    }
 
 
 @app.get("/health")

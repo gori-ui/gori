@@ -1,6 +1,5 @@
-__pycache__/
-*.py[cod]
-uvicorn.stdout.log
-uvicorn.stderr.log
-checkpoints/
-data/
+node_modules
+dist
+.env
+__pycache__
+*.log

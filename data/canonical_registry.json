@@ -1,0 +1,49 @@
+{
+  "GORI-20260326-BG-SS-9E30": {
+    "canonicalId": "GORI-20260326-BG-SS-9E30",
+    "runtimeIncidentId": "incident-struma-southwest",
+    "zoneId": "struma-southwest",
+    "zoneLabel": "Струмски югозападен коридор",
+    "createdAt": "2026-03-26T12:12:16.040641Z",
+    "firstObservedAt": "2026-03-26T12:12:11.904512Z",
+    "lastUpdatedAt": "2026-03-26T12:24:55.393685Z",
+    "location": {
+      "latitude": 41.95,
+      "longitude": 23.13
+    },
+    "lifecycleState": "active",
+    "severityLevel": "critical",
+    "status": "confirmed",
+    "sources": [
+      "verified_operational"
+    ],
+    "signalsCount": 1,
+    "timeline": [
+      {
+        "timestamp": "2026-03-26T12:24:55.393685Z",
+        "type": "incident_created",
+        "label": "Incident created from nearby wildfire signals"
+      },
+      {
+        "timestamp": "2026-03-26T12:24:55.393685Z",
+        "type": "signal_added",
+        "label": "Operational fire confirmation"
+      },
+      {
+        "timestamp": "2026-03-26T12:24:57.780208Z",
+        "type": "spread_pressure_increased",
+        "label": "Environmental spread pressure is elevated. Wind may push spread toward the север. Moderate slope adds some uphill spread pressure."
+      },
+      {
+        "timestamp": "2026-03-26T12:24:57.780208Z",
+        "type": "lifecycle_changed",
+        "label": "Incident moved to active state"
+      },
+      {
+        "timestamp": "2026-03-26T12:24:57.780208Z",
+        "type": "severity_changed",
+        "label": "Incident severity set to critical"
+      }
+    ]
+  }
+}

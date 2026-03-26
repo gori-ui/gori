@@ -6,8 +6,14 @@ import type {
   OperatorZoneDecisionApi,
 } from '../types/gori'
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(path)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path}`
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status}`)
   }
@@ -15,27 +21,31 @@ async function fetchJson<T>(path: string): Promise<T> {
 }
 
 export function fetchOperatorSummary() {
-  return fetchJson<OperatorSummaryApi>('/api/operator/summary')
+  return fetchJson<OperatorSummaryApi>(apiUrl('/api/operator/summary'))
 }
 
 export function fetchOperatorIncidents() {
-  return fetchJson<OperatorIncidentListItemApi[]>('/api/incidents?role=operator')
+  return fetchJson<OperatorIncidentListItemApi[]>(
+    apiUrl('/api/incidents?role=operator'),
+  )
 }
 
 export function fetchOperatorIncidentDetail(canonicalId: string) {
   return fetchJson<OperatorIncidentDetailApi>(
-    `/api/incidents/${encodeURIComponent(canonicalId)}?role=operator`,
+    apiUrl(`/api/incidents/${encodeURIComponent(canonicalId)}?role=operator`),
   )
 }
 
 export function fetchOperatorIncidentHistory(canonicalId: string) {
   return fetchJson<OperatorIncidentHistoryApiItem[]>(
-    `/api/incidents/${encodeURIComponent(canonicalId)}/history?role=operator`,
+    apiUrl(
+      `/api/incidents/${encodeURIComponent(canonicalId)}/history?role=operator`,
+    ),
   )
 }
 
 export function fetchOperatorZoneDecision(zoneId: string) {
   return fetchJson<OperatorZoneDecisionApi>(
-    `/api/zones/${encodeURIComponent(zoneId)}/decision?role=operator`,
+    apiUrl(`/api/zones/${encodeURIComponent(zoneId)}/decision?role=operator`),
   )
 }
