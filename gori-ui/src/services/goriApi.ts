@@ -6,7 +6,7 @@ import type {
   OperatorZoneDecisionApi,
 } from '../types/gori'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const API_BASE_URL = 'https://gori-production-66eb.up.railway.app'
 
 function apiUrl(path: string) {
   return `${API_BASE_URL}${path}`
