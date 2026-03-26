@@ -41,51 +41,53 @@ function IncidentListItem({
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+      className={`w-full border px-2.5 py-2.5 text-left transition ${
         isSelected
-          ? 'border-accent bg-accent/8 shadow-[inset_0_0_0_1px_rgba(255,107,61,0.12)]'
-          : 'border-border bg-[#111720] hover:border-slate-600 hover:bg-[#151c26]'
+          ? 'border-accent bg-[#181410] shadow-[inset_0_0_0_1px_rgba(255,107,61,0.18)]'
+          : 'border-border bg-[#10161d] hover:border-slate-600 hover:bg-[#131b24]'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold text-ink">{incident.zoneLabel}</div>
-          <div className="mt-1 text-xs tracking-[0.14em] text-slate-500">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink">
+            {incident.zoneLabel}
+          </div>
+          <div className="mt-1 truncate text-[10px] tracking-[0.18em] text-slate-500">
             {incident.canonicalId}
           </div>
         </div>
 
-        <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-100">
+        <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-orange-100">
           {incident.priorityCue}
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-1.5">
         <span
-          className={`rounded-full border px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${severityChipClasses[incident.severityLevel]}`}
+          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${severityChipClasses[incident.severityLevel]}`}
         >
           {incident.severityLevel}
         </span>
         <span
-          className={`rounded-full border px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${lifecycleChipClasses[incident.lifecycleState]}`}
+          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${lifecycleChipClasses[incident.lifecycleState]}`}
         >
           {incident.lifecycleState}
         </span>
         <span
-          className={`rounded-full border px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${spreadChipClasses[incident.spreadPressure]}`}
+          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${spreadChipClasses[incident.spreadPressure]}`}
         >
-          {incident.spreadPressure} spread
+          {incident.spreadPressure}
         </span>
       </div>
 
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
-        <dt className="text-slate-500">Status</dt>
+      <dl className="mt-2 grid grid-cols-[44px_1fr] gap-x-2 gap-y-1.5 text-[10px]">
+        <dt className="uppercase tracking-[0.14em] text-slate-500">Status</dt>
         <dd className="m-0 text-slate-200">{incident.status}</dd>
-        <dt className="text-slate-500">Lifecycle</dt>
-        <dd className="m-0 text-slate-200">
-          {toOperatorLabel(incident.lifecycleState)}
-        </dd>
-        <dt className="text-slate-500">Updated</dt>
+        <dt className="uppercase tracking-[0.14em] text-slate-500">Region</dt>
+        <dd className="m-0 text-slate-200">{incident.regionLabel}</dd>
+        <dt className="uppercase tracking-[0.14em] text-slate-500">State</dt>
+        <dd className="m-0 text-slate-200">{toOperatorLabel(incident.lifecycleState)}</dd>
+        <dt className="uppercase tracking-[0.14em] text-slate-500">Update</dt>
         <dd className="m-0 text-slate-200">{incident.lastUpdated}</dd>
       </dl>
     </button>

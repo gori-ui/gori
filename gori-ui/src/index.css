@@ -30,6 +30,10 @@ body {
   min-width: 320px;
   background: #0b0f14;
   color: #e6edf3;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 * {
@@ -49,9 +53,10 @@ select {
 }
 
 .maplibregl-ctrl-group {
-  background: rgba(20, 26, 34, 0.92);
+  background: rgba(13, 19, 26, 0.92);
   border: 1px solid #222a36;
   box-shadow: none;
+  border-radius: 0;
 }
 
 .maplibregl-ctrl-group button {
@@ -66,6 +71,7 @@ select {
   padding: 0;
   background: transparent;
   box-shadow: none;
+  border-radius: 0;
 }
 
 .maplibregl-popup-tip {
@@ -75,9 +81,8 @@ select {
 .map-popup {
   min-width: 180px;
   border: 1px solid #222a36;
-  border-radius: 12px;
-  background: rgba(20, 26, 34, 0.96);
-  padding: 0.85rem 0.95rem;
+  background: rgba(13, 19, 26, 0.96);
+  padding: 0.7rem 0.8rem;
   color: #e6edf3;
 }
 
@@ -95,6 +100,7 @@ select {
 }
 
 .map-marker {
+  position: relative;
   width: 16px;
   height: 16px;
   border-radius: 9999px;
@@ -124,4 +130,25 @@ select {
   box-shadow:
     0 0 0 4px rgba(20, 26, 34, 0.9),
     0 0 0 8px rgba(255, 107, 61, 0.35);
+}
+
+.map-marker--selected::before,
+.map-marker--selected::after {
+  content: '';
+  position: absolute;
+  inset: 50%;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 188, 162, 0.5);
+}
+
+.map-marker--selected::before {
+  width: 22px;
+  height: 22px;
+}
+
+.map-marker--selected::after {
+  width: 30px;
+  height: 30px;
+  border-color: rgba(255, 107, 61, 0.28);
 }
