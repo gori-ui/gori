@@ -289,6 +289,7 @@ def shape_decision_for_role(decision: dict, role: str) -> dict:
             "terrainInfluence": deepcopy(spread.get("terrainInfluence")),
             "note": spread.get("note"),
         },
+        "exposure": deepcopy(decision.get("exposure")),
         "crossConfirmation": deepcopy(fire_signal.get("crossConfirmation")),
         "routing": deepcopy(decision.get("routing")),
         "history": deepcopy(decision.get("history")),

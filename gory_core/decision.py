@@ -507,6 +507,136 @@ def build_role_actions(role_id: str, action_status: dict) -> dict:
     }
 
 
+def _terrain_supports_spread(terrain: dict | None) -> bool:
+    terrain_data = terrain or {}
+    terrain_pressure = (terrain_data.get("terrainPressure") or "").lower()
+    slope_class = (terrain_data.get("slopeClass") or "").lower()
+    terrain_note = (terrain_data.get("note") or "").lower()
+
+    return (
+        terrain_pressure in {"slope_aligned", "uphill"}
+        or slope_class in {"slope_aligned", "uphill"}
+        or "uphill" in terrain_note
+        or "slope aligned" in terrain_note
+    )
+
+
+def build_operational_priority(spread: dict | None, terrain: dict | None, signal_summary: dict | None) -> str:
+    pressure = ((spread or {}).get("spreadPressure") or "low").lower()
+
+    if pressure == "low":
+        return "monitor"
+
+    if pressure == "moderate":
+        if _terrain_supports_spread(terrain):
+            return "prepare"
+        return "monitor"
+
+    if pressure == "high":
+        return "act"
+
+    return "monitor"
+
+
+def build_decision_reasoning(spread: dict | None, terrain: dict | None, meteo: dict | None) -> list[str]:
+    reasons: list[str] = []
+    spread_data = spread or {}
+    meteo_values = (meteo or {}).get("values", {})
+
+    if spread_data.get("windDirectionDeg") is not None or meteo_values.get("wind_direction_deg") is not None:
+        reasons.append("wind_present")
+
+    if spread_data.get("higherRiskDirection"):
+        reasons.append("wind_aligned_with_spread")
+
+    if _terrain_supports_spread(terrain):
+        reasons.append("terrain_supports_spread")
+
+    if (meteo or {}).get("status") == "partial":
+        reasons.append("partial_meteo_context")
+
+    return reasons[:4]
+
+
+def build_spread_horizon(spread: dict | None) -> dict:
+    pressure = ((spread or {}).get("spreadPressure") or "low").lower()
+
+    if pressure == "moderate":
+        return {"+15": "moderate", "+30": "moderate"}
+
+    if pressure == "high":
+        return {"+15": "moderate", "+30": "high"}
+
+    return {"+15": "low", "+30": "low"}
+
+
+def build_exposure_summary(
+    zone: dict,
+    incident: dict | None,
+    spread: dict | None,
+    routing: dict | None,
+    meteo: dict | None,
+) -> dict | None:
+    if (spread or {}).get("status") != "available":
+        return None
+
+    spread_data = spread or {}
+    direction = spread_data.get("higherRiskDirection")
+    pressure = spread_data.get("spreadPressure") or "low"
+    wind = spread_data.get("windSpeedKmh")
+    terrain = spread_data.get("terrainInfluence") or {}
+    if not direction:
+        return None
+
+    base_radius_km = {
+        "low": 3,
+        "moderate": 6,
+        "high": 10,
+        "extreme": 15,
+    }.get(pressure, 3)
+
+    forward_bias = {
+        "low": 1.1,
+        "moderate": 1.35,
+        "high": 1.65,
+        "extreme": 1.95,
+    }.get(pressure, 1.1)
+
+    basis = []
+    if wind is not None:
+        basis.append(f"wind {wind} km/h")
+    terrain_pressure = terrain.get("terrainPressure")
+    if terrain_pressure:
+        basis.append(f"terrain {terrain_pressure}")
+    if routing and routing.get("status") == "available":
+        basis.append("routing context")
+    if incident:
+        basis.append("incident context")
+    if meteo and meteo.get("status") in {"live", "partial"}:
+        basis.append("live meteo")
+
+    horizon = build_spread_horizon(spread_data)
+    priority = build_operational_priority(spread_data, terrain, incident)
+    reasoning = build_decision_reasoning(spread_data, terrain, meteo)
+
+    return {
+        "status": "available",
+        "primaryDirection": direction,
+        "direction": direction,
+        "pressure": pressure,
+        "timeHorizon": ["+15", "+30"],
+        "horizon": horizon,
+        "priority": priority,
+        "reasoning": reasoning,
+        "confidence": (spread or {}).get("status"),
+        "summary": f"Fire likely to spread toward {direction} under {pressure} pressure.",
+        "targets": [],
+        "basis": basis,
+        "baseRadiusKm": base_radius_km,
+        "forwardBias": forward_bias,
+    }
+
+
 def build_decision_payload(
     zone: dict,
     role_id: str,
@@ -525,6 +655,14 @@ def build_decision_payload(
     reasoning = build_reasoning(zone, meteo_snapshot, fire_snapshot, spread_summary)
     confidence = build_confidence(zone, meteo_snapshot, fire_snapshot)
     role_actions = build_role_actions(role_id, action_status)
+    routing_payload = routing_summary or build_unavailable_routing_summary(zone)
+    exposure_summary = build_exposure_summary(
+        zone,
+        fire_snapshot.get("incident"),
+        spread_summary,
+        routing_payload,
+        meteo_snapshot,
+    )
 
     return {
         "zone": {
@@ -552,12 +690,13 @@ def build_decision_payload(
         "meteo": meteo_snapshot,
         "fireSignal": fire_snapshot,
         "spread": spread_summary,
+        "exposure": exposure_summary,
         "incident": fire_snapshot.get("incident"),
         "history": history_context or {
             "incidentHistoryCount": 0,
             "recentIncidentsNearbyCount": 0,
         },
-        "routing": routing_summary or build_unavailable_routing_summary(zone),
+        "routing": routing_payload,
         "roleAction": role_actions,
     }
 

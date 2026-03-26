@@ -1,276 +1,221 @@
 import type { ReactNode } from 'react'
 
-import type { GeneratedDecision } from './decisionEngine'
-import SignalTimelineItem from './SignalTimelineItem'
-import type { MockIncident } from './mockIncidents'
+import {
+  t,
+  translateDecisionReason,
+  translateDirection,
+  translateLifecycle,
+  translateOperationalPriority,
+  translatePriorityCue,
+  translateSeverity,
+  translateSpreadPressure,
+} from '../../lib/translations'
+import type {
+  AppLanguage,
+  ForecastDecisionView,
+  OperatorIncidentView,
+} from '../../types/gori'
 
 type IncidentPanelProps = {
-  incident: MockIncident | null
-  decision: GeneratedDecision | null
-  onGenerateDecision: () => void
+  incident: OperatorIncidentView | null
+  decision: ForecastDecisionView | null
+  language: AppLanguage
 }
 
-const severityChipClasses: Record<MockIncident['severityLevel'], string> = {
-  critical: 'border-red-500/30 bg-red-500/10 text-red-200',
-  major: 'border-orange-500/30 bg-orange-500/10 text-orange-200',
-  minor: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200',
+const severityChipClasses: Record<OperatorIncidentView['severityLevel'], string> = {
+  critical: 'border-red-500/24 bg-red-500/8 text-red-200',
+  major: 'border-orange-500/24 bg-orange-500/8 text-orange-200',
+  minor: 'border-yellow-500/24 bg-yellow-500/8 text-yellow-200',
 }
 
-const lifecycleChipClasses: Record<MockIncident['lifecycleState'], string> = {
-  active: 'border-accent/25 bg-accent/10 text-orange-100',
-  stabilizing: 'border-cyan-500/25 bg-cyan-500/10 text-cyan-100',
-  contained: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-100',
+const lifecycleChipClasses: Record<OperatorIncidentView['lifecycleState'], string> = {
+  active: 'border-red-500/18 bg-red-500/8 text-red-100',
+  stabilizing: 'border-slate-500/18 bg-slate-500/8 text-slate-200',
+  contained: 'border-slate-500/18 bg-slate-500/8 text-slate-300',
 }
 
-const pressureChipClasses: Record<MockIncident['spreadPressure'], string> = {
-  high: 'border-red-500/25 bg-red-500/10 text-red-200',
-  elevated: 'border-orange-500/25 bg-orange-500/10 text-orange-200',
-  moderate: 'border-yellow-500/25 bg-yellow-500/10 text-yellow-200',
-  low: 'border-slate-500/25 bg-slate-500/10 text-slate-300',
+const pressureChipClasses: Record<OperatorIncidentView['spreadPressure'], string> = {
+  high: 'border-red-500/18 bg-red-500/8 text-red-200',
+  elevated: 'border-orange-500/18 bg-orange-500/8 text-orange-200',
+  moderate: 'border-slate-500/18 bg-slate-500/8 text-slate-200',
+  low: 'border-slate-500/18 bg-slate-500/8 text-slate-300',
 }
 
 function DetailSection({
   title,
   children,
+  dominant = false,
 }: {
   title: string
   children: ReactNode
+  dominant?: boolean
 }) {
   return (
-    <section className="border border-border bg-[#10161d] p-3">
-      <h3 className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent">
+    <section
+      className={
+        dominant
+          ? 'border border-accent/28 bg-[#1a110d] p-2.5 shadow-[inset_0_0_0_1px_rgba(255,107,61,0.12)]'
+          : 'border-l border-slate-800 bg-[#0e141a] p-2.5'
+      }
+    >
+      <h3
+        className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${
+          dominant ? 'text-orange-100' : 'text-slate-500'
+        }`}
+      >
         {title}
       </h3>
-      <div className="mt-3">{children}</div>
+      <div className="mt-2">{children}</div>
     </section>
   )
 }
 
-function IncidentPanel({
-  incident,
-  decision,
-  onGenerateDecision,
-}: IncidentPanelProps) {
+function IncidentPanel({ incident, decision, language }: IncidentPanelProps) {
   if (!incident) {
     return (
-      <aside className="flex min-h-[320px] items-center justify-center border border-border bg-panel p-6 text-center text-sm text-slate-400">
-        No incident selected.
+      <aside className="flex h-full min-h-0 items-center justify-center border border-border bg-panel p-4 text-center text-sm text-slate-400">
+        {t(language, 'noIncidentSelected')}
       </aside>
     )
   }
 
+  const prioritizedTargets = decision?.targets ?? []
+  const topTarget = prioritizedTargets[0] ?? null
+  const directionLabel = decision?.spreadDirection
+    ? translateDirection(language, decision.spreadDirection)
+    : decision?.spreadDirectionLabel ?? '-'
+
+  const actionText = decision
+    ? topTarget
+      ? language === 'bg'
+        ? `Действие: ранно предупреждение и защита за ${topTarget.name}.`
+        : `Action: early warning and protection for ${topTarget.name}.`
+      : decision.recommendedAction
+    : language === 'bg'
+      ? 'Няма активен риск. Продължава наблюдение.'
+      : 'No active risk. Monitoring continues.'
+
+  const situationText = decision
+    ? topTarget
+      ? language === 'bg'
+        ? `Посока: ${directionLabel}. Риск: ${topTarget.name} ${topTarget.horizon}.`
+        : `Direction: ${directionLabel}. Risk: ${topTarget.name} ${topTarget.horizon}.`
+      : decision.summary
+    : language === 'bg'
+      ? 'Няма активен риск.'
+      : 'No active risk.'
+
+  const confidenceLine = `${incident.confidenceLabel} • ${incident.lastUpdated} • ${incident.signals.length} ${
+    language === 'bg' ? 'източника' : 'sources'
+  }`
+  const compactReasons = (decision?.reasoning ?? []).slice(0, 3)
+
   return (
-    <aside className="flex min-h-[320px] flex-col border border-border bg-panel">
-      <div className="overflow-y-auto p-2">
-        <DetailSection title="Incident Detail">
-          <div className="space-y-2">
-            <div>
-              <p className="text-[9px] uppercase tracking-[0.2em] text-slate-500">
-                Incident
-              </p>
-              <h2 className="mt-1 text-[13px] font-semibold uppercase tracking-[0.1em] text-ink">
-                {incident.incidentId}
-              </h2>
-            </div>
-            <div className="grid gap-1 text-[10px] text-slate-300">
-              <div className="flex justify-between gap-3">
-                <span className="uppercase tracking-[0.16em] text-slate-500">
-                  Zone
-                </span>
-                <span>{incident.zoneLabel}</span>
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden border border-border bg-panel">
+      <div className="shrink-0 p-1.5 pb-0">
+        <DetailSection title={t(language, 'incidentDetail')}>
+          <div className="space-y-1.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink">
+                  {incident.incidentId}
+                </div>
+                <div className="mt-0.5 text-[10px] leading-4 text-slate-400">
+                  {incident.zoneLabel} · {incident.regionLabel}
+                </div>
               </div>
-              <div className="flex justify-between gap-3">
-                <span className="uppercase tracking-[0.16em] text-slate-500">
-                  Region
+              <div className="flex flex-wrap justify-end gap-1">
+                <span
+                  className={`rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.14em] ${severityChipClasses[incident.severityLevel]}`}
+                >
+                  {translateSeverity(language, incident.severityLevel)}
                 </span>
-                <span>{incident.regionLabel}</span>
+                <span
+                  className={`rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.14em] ${lifecycleChipClasses[incident.lifecycleState]}`}
+                >
+                  {translateLifecycle(language, incident.lifecycleState)}
+                </span>
+                <span className="rounded-full border border-accent/18 bg-accent/8 px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.14em] text-orange-100">
+                  {translatePriorityCue(language, incident.priorityCue)}
+                </span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <span
-                className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${severityChipClasses[incident.severityLevel]}`}
-              >
-                {incident.severityLevel}
-              </span>
-              <span
-                className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${lifecycleChipClasses[incident.lifecycleState]}`}
-              >
-                {incident.lifecycleState}
-              </span>
-              <span className="rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-orange-100">
-                {incident.priorityCue}
-              </span>
+            <div className="flex items-center justify-between gap-3 text-[9px] text-slate-300">
+              <span className="truncate">{incident.status}</span>
+              <span className="shrink-0 text-slate-500">{incident.lastUpdated}</span>
             </div>
           </div>
         </DetailSection>
+      </div>
 
-        <div className="mt-2 grid gap-2">
-          <DetailSection title="Operational Status">
-            <dl className="space-y-2 text-[10px]">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="uppercase tracking-[0.16em] text-slate-500">
-                  Status
-                </dt>
-                <dd className="m-0 text-right text-slate-200">{incident.status}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="uppercase tracking-[0.16em] text-slate-500">
-                  Signals
-                </dt>
-                <dd className="m-0 text-slate-200">{incident.signalCount}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="uppercase tracking-[0.16em] text-slate-500">
-                  Update
-                </dt>
-                <dd className="m-0 text-right text-slate-200">{incident.lastUpdated}</dd>
-              </div>
-            </dl>
+      <div className="flex-1 overflow-y-auto p-1.5 pt-1.5">
+        <div className="space-y-1.5">
+          <DetailSection title={t(language, 'recommendedResponse')} dominant>
+            <div className="space-y-2 text-[10px]">
+              <p className="text-[11px] leading-5 text-orange-50">{actionText}</p>
+              {decision ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="uppercase tracking-[0.16em] text-orange-100/70">
+                    {t(language, 'decisionPriority')}
+                  </span>
+                  <span className="text-orange-50">
+                    {translateOperationalPriority(language, decision.operationalPriority)}
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </DetailSection>
 
-          <DetailSection title="Spread Context">
+          <DetailSection title={t(language, 'direction')}>
             <div className="space-y-2 text-[10px]">
               <div className="flex items-center justify-between gap-3">
-                <span className="uppercase tracking-[0.16em] text-slate-500">
-                  Pressure
-                </span>
+                <span className="text-slate-200">{directionLabel}</span>
                 <span
-                  className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] ${pressureChipClasses[incident.spreadPressure]}`}
+                  className={`rounded-full border px-1.5 py-0.5 text-[8px] font-medium uppercase tracking-[0.14em] ${pressureChipClasses[incident.spreadPressure]}`}
                 >
-                  {incident.spreadPressure}
+                  {translateSpreadPressure(language, incident.spreadPressure)}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="uppercase tracking-[0.16em] text-slate-500">
-                  Wind
-                </span>
-                <span className="text-slate-200">
-                  {incident.windDirection} · {incident.windSpeedKmh} km/h
-                </span>
-              </div>
-              <p className="leading-5 text-slate-300">{incident.terrainSummary}</p>
-              <p className="leading-5 text-slate-400">{incident.localContext}</p>
+              {decision ? <p className="leading-5 text-slate-300">{situationText}</p> : null}
             </div>
           </DetailSection>
 
-          <DetailSection title="Decision">
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={onGenerateDecision}
-                className="w-full rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-100 transition hover:border-accent/50 hover:bg-accent/15"
-              >
-                Generate Decision
-              </button>
-
-              {decision ? (
-                <div className="space-y-3 text-[10px]">
-                  <div className="border border-accent/20 bg-accent/10 p-2.5 text-orange-50">
-                    <div className="font-medium uppercase tracking-[0.16em] text-orange-100">
-                      Recommended Action
-                    </div>
-                    <p className="mt-1 leading-5">{decision.recommendedAction}</p>
-                  </div>
-
-                  <dl className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="uppercase tracking-[0.16em] text-slate-500">
-                        Direction
-                      </dt>
-                      <dd className="m-0 text-slate-200">{decision.spreadDirectionLabel}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="uppercase tracking-[0.16em] text-slate-500">
-                        Wind support
-                      </dt>
-                      <dd className="m-0 text-slate-200">{decision.windSupport}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="uppercase tracking-[0.16em] text-slate-500">
-                        +15 reach
-                      </dt>
-                      <dd className="m-0 text-slate-200">{decision.plus15ReachKm.toFixed(1)} km</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="uppercase tracking-[0.16em] text-slate-500">
-                        +30 reach
-                      </dt>
-                      <dd className="m-0 text-slate-200">{decision.plus30ReachKm.toFixed(1)} km</dd>
-                    </div>
-                  </dl>
-
-                  <p className="leading-5 text-slate-300">{decision.summary}</p>
-                  <p className="leading-5 text-slate-400">{decision.rationale}</p>
-                </div>
+          {decision ? (
+            <DetailSection title={t(language, 'placesAtRisk')}>
+              {prioritizedTargets.length > 0 ? (
+                <ul className="space-y-1.5 text-[10px] text-slate-200">
+                  {prioritizedTargets.slice(0, 4).map((target) => (
+                    <li
+                      key={target.id}
+                      className="flex items-center justify-between gap-3 border-l border-slate-700 pl-2"
+                    >
+                      <span className="truncate text-slate-200">{target.name}</span>
+                      <span className="shrink-0 text-slate-400">{target.horizon}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <p className="text-[10px] leading-5 text-slate-400">
-                  Generate a decision to project the likely spread corridor and see which target is threatened first.
+                  {t(language, 'noConfirmedTargets')}
                 </p>
               )}
-            </div>
-          </DetailSection>
+            </DetailSection>
+          ) : null}
 
-          <DetailSection title="Priority Targets">
-            {decision && decision.targets.length > 0 ? (
-              <ul className="space-y-2 text-[10px] text-slate-200">
-                {decision.targets.slice(0, 4).map((target) => (
-                  <li key={target.id} className="border-l border-border pl-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span>{target.name}</span>
-                      <span className="text-slate-400">{target.horizon}</span>
-                    </div>
-                    <div className="mt-1 text-slate-400">
-                      {target.type} · {target.priority} · {target.distanceKm.toFixed(1)} km
-                    </div>
+          {compactReasons.length > 0 ? (
+            <DetailSection title={t(language, 'reasoning')}>
+              <ul className="space-y-1 text-[10px] text-slate-300">
+                {compactReasons.map((reason) => (
+                  <li key={reason} className="leading-5">
+                    • {translateDecisionReason(language, reason)}
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-[10px] leading-5 text-slate-400">
-                No forecast target has been evaluated yet.
-              </p>
-            )}
-          </DetailSection>
+            </DetailSection>
+          ) : null}
 
-          <DetailSection title="Verification">
-            <dl className="space-y-2 text-[10px]">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="uppercase tracking-[0.16em] text-slate-500">
-                  Confidence
-                </dt>
-                <dd className="m-0 text-slate-200">{incident.confidenceLabel}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="uppercase tracking-[0.16em] text-slate-500">
-                  Source
-                </dt>
-                <dd className="m-0 text-right text-slate-200">
-                  {incident.verificationStatus}
-                </dd>
-              </div>
-            </dl>
-          </DetailSection>
-
-          <DetailSection title="Signals">
-            <ul className="space-y-1 text-[10px] text-slate-200">
-              {incident.signals.map((signal) => (
-                <li key={signal} className="border-l border-border pl-2">
-                  {signal}
-                </li>
-              ))}
-            </ul>
-          </DetailSection>
-
-          <DetailSection title="Timeline">
-            <div>
-              {incident.timeline.map((entry, index) => (
-                <SignalTimelineItem
-                  key={`${incident.canonicalId}-${entry.time}-${index}`}
-                  entry={entry}
-                  isLast={index === incident.timeline.length - 1}
-                />
-              ))}
-            </div>
+          <DetailSection title={t(language, 'trustSignals')}>
+            <div className="text-[10px] leading-5 text-slate-300">{confidenceLine}</div>
           </DetailSection>
         </div>
       </div>

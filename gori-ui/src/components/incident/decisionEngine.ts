@@ -26,6 +26,10 @@ export type GeneratedDecision = {
   recommendedAction: string
   summary: string
   rationale: string
+  timeHorizons: string[]
+  exposureConfidence: string | null
+  operationalPriority: 'monitor' | 'prepare' | 'act'
+  reasoning: string[]
   topTarget: DecisionTarget | null
   targets: DecisionTarget[]
 }
@@ -213,6 +217,40 @@ function buildTargets(incident: MockIncident): DecisionTarget[] {
     .map(({ score: _score, ...target }) => target)
 }
 
+function buildOperationalPriority(
+  spreadPressure: MockIncident['spreadPressure'],
+  topTarget: DecisionTarget | null,
+): GeneratedDecision['operationalPriority'] {
+  if (spreadPressure === 'high') {
+    return 'act'
+  }
+  if (spreadPressure === 'elevated' || (spreadPressure === 'moderate' && topTarget)) {
+    return 'prepare'
+  }
+  return 'monitor'
+}
+
+function buildReasoning(
+  incident: MockIncident,
+  topTarget: DecisionTarget | null,
+): string[] {
+  const reasons = ['wind_supports_spread']
+
+  if (incident.spreadPressure === 'high' || incident.spreadPressure === 'elevated') {
+    reasons.push('fire_intensity_elevated')
+  }
+
+  if (incident.terrainSummary.toLowerCase().includes('slope')) {
+    reasons.push('terrain_supports_spread')
+  }
+
+  if (topTarget) {
+    reasons.push(topTarget.horizon === '+15 min' ? 'near_term_target_exposed' : 'corridor_target_exposed')
+  }
+
+  return reasons.slice(0, 4)
+}
+
 export function generateDecision(incident: MockIncident): GeneratedDecision {
   const targets = buildTargets(incident)
   const topTarget = targets[0] ?? null
@@ -225,6 +263,8 @@ export function generateDecision(incident: MockIncident): GeneratedDecision {
   const corridorHalfAngleDeg = incident.spreadPressure === 'high' ? 32 : incident.spreadPressure === 'elevated' ? 28 : 24
   const spreadDirectionLabel = directionLabel[incident.windDirection]
   const windSupport = windSupportLabel(incident.windSpeedKmh)
+  const operationalPriority = buildOperationalPriority(incident.spreadPressure, topTarget)
+  const reasoning = buildReasoning(incident, topTarget)
 
   const recommendedAction = topTarget
     ? topTarget.priority === 'Immediate'
@@ -251,6 +291,10 @@ export function generateDecision(incident: MockIncident): GeneratedDecision {
     recommendedAction,
     summary,
     rationale,
+    timeHorizons: ['+15', '+30'],
+    exposureConfidence: 'available',
+    operationalPriority,
+    reasoning,
     topTarget,
     targets,
   }
