@@ -6,10 +6,11 @@ import type {
   OperatorZoneDecisionApi,
 } from '../types/gori'
 
-const API_BASE_URL = 'https://gori-production-66eb.up.railway.app'
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
 
 function apiUrl(path: string) {
-  return `${API_BASE_URL}${path}`
+  return `${API_BASE_URL}${path}`;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
